@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, ReactNode } from "react";
 
 // Crossword Battle Arena – Sarcastic Bot Edition
 // Single-file React component. TailwindCSS for styling.
@@ -48,7 +48,7 @@ const PUZZLES = [
 const BOT_NAMES = ["Snarky McByte", "Quipotron", "Sass-9000", "Irony Engine", "ZingBot"];
 
 const SARCASM = [
-  (msg) => `Wow, \"${msg}\". Bold strategy. Let's see if the dictionary agrees.`,
+  (msg: string) => `Wow, \"${msg}\". Bold strategy. Let's see if the dictionary agrees.`,
   () => `I solved that while buffering. You okay over there?`,
   () => `My circuits yawned. Can we pick up the pace?`,
   () => `I'll dumb down to 8-bit so it's fair.`,
@@ -58,9 +58,11 @@ const SARCASM = [
   () => `Beep boop: that guess was… courageous.`,
 ];
 
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
-function sarcasticReply(userMsg, event = "chat") {
+function sarcasticReply(userMsg: string, event: string = "chat") {
   const base = pick(SARCASM);
   if (event === "correct") return "Congrats, a correct answer. Alert the media.";
   if (event === "wrong") return "Close. Like, 'I can see it from here' close.";
@@ -69,7 +71,12 @@ function sarcasticReply(userMsg, event = "chat") {
 }
 
 // ----------------------- UI HELPERS -----------------------
-function ScoreBadge({ label, score, highlight = false }) {
+interface ScoreBadgeProps {
+  label: string;
+  score: number;
+  highlight?: boolean;
+}
+function ScoreBadge({ label, score, highlight = false }: ScoreBadgeProps) {
   return (
     <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl shadow ${highlight ? "bg-black text-white" : "bg-white"}`}>
       <span className="text-sm opacity-70">{label}</span>
@@ -77,8 +84,13 @@ function ScoreBadge({ label, score, highlight = false }) {
     </div>
   );
 }
+interface ModalProps {
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}
 
-function Modal({ open, onClose, children }) {
+function Modal({ open, onClose, children }: ModalProps) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -105,7 +117,7 @@ export default function CrosswordBattleArena() {
   const [selected, setSelected] = useState(puzzle.words[0].number);
   const [timeLeft, setTimeLeft] = useState(120); // seconds
   const [gameOver, setGameOver] = useState(false);
-  const chatEndRef = useRef(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // Derived maps
   const byNumber = useMemo(() => Object.fromEntries(puzzle.words.map(w => [w.number, w])), [puzzle]);
@@ -170,7 +182,7 @@ export default function CrosswordBattleArena() {
     setChat(c => [...c, { who: "bot", text: verdict }]);
   }
 
-  function submitGuess(e) {
+  function submitGuess(e: React.FormEvent<HTMLFormElement>) {
     e?.preventDefault();
     const word = byNumber[selected];
     if (!word) return;
@@ -199,7 +211,7 @@ export default function CrosswordBattleArena() {
     }
   }
 
-  function sendChat(msg) {
+  function sendChat(msg: string) {
     if (!msg.trim()) return;
     setChat(c => [...c, { who: "me", text: msg }]);
     setTimeout(() => {
@@ -208,7 +220,12 @@ export default function CrosswordBattleArena() {
   }
 
   // Render helpers
-  function Cell({ r, c }) {
+  type CellProps = {
+  r: number;
+  c: number;
+};
+
+function Cell({ r, c }: CellProps) {
     const val = grid[r][c];
     return (
       <div className="size-12 border border-zinc-300 flex items-center justify-center text-xl font-semibold bg-white">
@@ -216,8 +233,19 @@ export default function CrosswordBattleArena() {
       </div>
     );
   }
+type Word = {
+  number: number;
+  clue: string;
+  answer: string;
+  direction?: "across" | "down";
+  cells?: [number, number][];
+};
 
-  function WordItem({ w }) {
+type WordItemProps = {
+  w: Word;
+};
+
+function WordItem({ w }: WordItemProps) {
     const isSolved = solved.has(w.number);
     const active = selected === w.number;
     return (

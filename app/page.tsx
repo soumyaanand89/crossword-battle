@@ -373,7 +373,7 @@ function WordItem({ w }: WordItemProps) {
       <Modal open={gameOver} onClose={() => {}}>
         <div className="text-center">
           <h2 className="text-2xl font-bold">Game Over</h2>
-          <p className="mt-2 opacity-70">Time's up or all words solved.</p>
+          <p className="mt-2 opacity-70">Time&apos;s up or all words solved.</p>
           <div className="mt-4 flex items-center justify-center gap-4">
             <ScoreBadge label="You" score={userScore} highlight={userScore >= botScore} />
             <ScoreBadge label="Bot" score={botScore} highlight={botScore > userScore} />

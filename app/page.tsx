@@ -270,7 +270,7 @@ export default function CrosswordBattleArena() {
           <div className="w-10 h-10 rounded-2xl bg-black text-white grid place-items-center font-black">XB</div>
           <div>
             <h1 className="text-xl font-bold">Crossword Battle Arena (10×10)</h1>
-            <p className="text-xs opacity-60">Answer input (left) — Chat (right). Answers won't appear in chat.</p>
+            <p className="text-xs opacity-60">Answer input (left) — Chat (right).</p>
           </div>
         </div>
 
@@ -343,7 +343,7 @@ export default function CrosswordBattleArena() {
             <button onClick={sendChat} className="px-4 py-2 rounded-xl bg-black text-white">Send</button>
           </div>
 
-          <p className="text-xs opacity-60 mt-2">Tip: Use the left box to answer clues. The chat is separate and won't show your answers.</p>
+          <p className="text-xs opacity-60 mt-2">Tip: Use the left box to answer clues.</p>
         </section>
       </main>
 

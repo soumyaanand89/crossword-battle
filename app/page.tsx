@@ -1,12 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState, ReactNode } from "react";
 
-// Crossword Battle Arena – GfG Puzzle #10 Edition (final)
-// - 10x10 crossword
-// - Only word cells are white; unused are black
-// - Clue numbers on starting squares
-// - Separate answer box (left) and chat box (right) — answers DO NOT appear in chat
-// - Bot with sarcasm, scoring, timer, progress bar, auto-solver
+// Crossword Battle Arena – GfG Puzzle #10 Edition (fixed for duplicate clue numbers)
 
 // ----------------------- PUZZLE -----------------------
 const PUZZLE = {
@@ -16,7 +11,7 @@ const PUZZLE = {
   words: [
     // ACROSS
     { number: 1, row: 0, col: 0, answer: "TRIP", clue: "Excursion", direction: "across" },
-    { number: 5, row: 0, col: 7, answer: "SAP", clue: "tree fluid", direction: "across" },
+    { number: 5, row: 0, col: 7, answer: "SAP", clue: "Tree fluid", direction: "across" },
     { number: 6, row: 1, col: 3, answer: "REACH", clue: "Boxer's stat", direction: "across" },
     { number: 7, row: 2, col: 0, answer: "BLUE", clue: "Spectrum color", direction: "across" },
     { number: 8, row: 3, col: 3, answer: "SWEEP", clue: "Use a broom", direction: "across" },
@@ -25,6 +20,7 @@ const PUZZLE = {
     { number: 14, row: 6, col: 0, answer: "UNCLE", clue: "Remus, e.g.", direction: "across" },
     { number: 15, row: 7, col: 4, answer: "LATE", clue: "Recent", direction: "across" },
     { number: 17, row: 2, col: 7, answer: "IVY", clue: "Climbing plant", direction: "across" },
+    { number: 19, row: 9, col: 0, answer: "ROBUST", clue: "Strong", direction: "across" },
 
     // DOWN
     { number: 2, row: 0, col: 1, answer: "RULER", clue: "King or Queen", direction: "down" },
@@ -37,7 +33,6 @@ const PUZZLE = {
     { number: 12, row: 4, col: 2, answer: "EACH", clue: "Apiece", direction: "down" },
     { number: 16, row: 7, col: 5, answer: "ANT", clue: "Picnic pest", direction: "down" },
     { number: 18, row: 7, col: 7, answer: "END", clue: "Finish", direction: "down" },
-    { number: 19, row: 9, col: 0, answer: "ROBUST", clue: "Strong", direction: "across" },
     { number: 20, row: 2, col: 9, answer: "YEARLING", clue: "Animal one year old", direction: "down" },
   ],
 };
@@ -90,7 +85,7 @@ function Modal({ open, onClose, children }: ModalProps) {
 export default function CrosswordBattleArena() {
   const puzzle = useMemo(() => PUZZLE, []);
   const [grid, setGrid] = useState<string[][]>(() => Array.from({ length: puzzle.rows }, () => Array(puzzle.cols).fill("")));
-  const [solved, setSolved] = useState<Set<number>>(() => new Set());
+  const [solved, setSolved] = useState<Set<string>>(() => new Set());
   const [userScore, setUserScore] = useState(0);
   const [botScore, setBotScore] = useState(0);
   const [chat, setChat] = useState<{ who: "bot" | "me"; text: string }[]>(() => [
@@ -98,23 +93,26 @@ export default function CrosswordBattleArena() {
   ]);
   const [answerInput, setAnswerInput] = useState(""); // left answer box
   const [chatInput, setChatInput] = useState(""); // right chat box
-  const [selected, setSelected] = useState<number>(() => puzzle.words[0].number);
+  const [selected, setSelected] = useState<string>(() => `${puzzle.words[0].number}${puzzle.words[0].direction === "across" ? "A" : "D"}`);
   const [timeLeft, setTimeLeft] = useState(180); // seconds
   const [gameOver, setGameOver] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // maps
-  const byNumber = useMemo(() => Object.fromEntries(puzzle.words.map(w => [w.number, w])), [puzzle]);
-  const remaining = useMemo(() => puzzle.words.filter(w => !solved.has(w.number)), [puzzle, solved]);
+  const byId = useMemo(
+    () => Object.fromEntries(puzzle.words.map(w => [`${w.number}${w.direction === "across" ? "A" : "D"}`, w])),
+    [puzzle]
+  );
+  const remaining = useMemo(() => puzzle.words.filter(w => !solved.has(`${w.number}${w.direction === "across" ? "A" : "D"}`)), [puzzle, solved]);
 
-  // compute used cells set for black/white rendering
+  // compute used cells
   const usedCells = useMemo(() => {
     const s = new Set<string>();
     for (const w of puzzle.words) {
       for (let i = 0; i < w.answer.length; i++) {
         const r = w.direction === "down" ? w.row + i : w.row;
         const c = w.direction === "across" ? w.col + i : w.col;
-        if (r >= 0 && r < puzzle.rows && c >= 0 && c < puzzle.cols) s.add(`${r}-${c}`);
+        s.add(`${r}-${c}`);
       }
     }
     return s;
@@ -129,10 +127,9 @@ export default function CrosswordBattleArena() {
     const id = setInterval(() => setTimeLeft(t => t - 1), 1000);
     return () => clearInterval(id);
   }, [gameOver]);
-
   useEffect(() => { if (timeLeft <= 0 && !gameOver) finishGame(); }, [timeLeft, gameOver]);
 
-  // bot autosolve loop
+  // bot autosolve
   const botSolveDelayMs = 15000;
   useEffect(() => {
     if (gameOver) return;
@@ -140,23 +137,20 @@ export default function CrosswordBattleArena() {
     const id = setInterval(() => {
       if (remaining.length === 0) return;
       const target = pick(remaining);
-      setSolved(prev => new Set(prev).add(target.number));
+      const idKey = `${target.number}${target.direction === "across" ? "A" : "D"}`;
+      setSolved(prev => new Set(prev).add(idKey));
       setBotScore(s => s + target.answer.length * 10);
-      setChat(c => [...c, { who: "bot", text: `Solved ${target.number}${target.direction[0].toUpperCase()}. ${sarcasticReply("", "botscored")}` }]);
+      setChat(c => [...c, { who: "bot", text: `Solved ${idKey}. ${sarcasticReply("", "botscored")}` }]);
       setGrid(g => {
         const gg = g.map(row => [...row]);
-        if (target.direction === "across") {
-          for (let i = 0; i < target.answer.length; i++) gg[target.row][target.col + i] = target.answer[i];
-        } else {
-          for (let i = 0; i < target.answer.length; i++) gg[target.row + i][target.col] = target.answer[i];
-        }
+        if (target.direction === "across") for (let i = 0; i < target.answer.length; i++) gg[target.row][target.col + i] = target.answer[i];
+        else for (let i = 0; i < target.answer.length; i++) gg[target.row + i][target.col] = target.answer[i];
         return gg;
       });
     }, botSolveDelayMs);
     return () => clearInterval(id);
   }, [remaining.length, gameOver]);
 
-  // new game
   function newGame() {
     setGrid(Array.from({ length: puzzle.rows }, () => Array(puzzle.cols).fill("")));
     setSolved(new Set());
@@ -165,7 +159,7 @@ export default function CrosswordBattleArena() {
     setChat([{ who: "bot", text: `I'm ${pick(BOT_NAMES)} again. Try not to embarrass yourself.` }]);
     setAnswerInput("");
     setChatInput("");
-    setSelected(puzzle.words[0].number);
+    setSelected(`${puzzle.words[0].number}${puzzle.words[0].direction === "across" ? "A" : "D"}`);
     setTimeLeft(180);
     setGameOver(false);
   }
@@ -176,17 +170,16 @@ export default function CrosswordBattleArena() {
     setChat(c => [...c, { who: "bot", text: verdict }]);
   }
 
-  // submit answer (left box) — DOES NOT post answer to chat
+  // submit answer
   function submitAnswer(e?: React.FormEvent) {
     e?.preventDefault?.();
-    const word = byNumber[selected];
+    const word = byId[selected];
     if (!word) return;
     const guess = answerInput.trim().toUpperCase();
     if (!guess) return;
-    const correct = guess === word.answer;
-    if (correct) {
-      if (!solved.has(word.number)) {
-        const newSolved = new Set(solved).add(word.number);
+    if (guess === word.answer) {
+      if (!solved.has(selected)) {
+        const newSolved = new Set(solved).add(selected);
         setSolved(newSolved);
         setUserScore(s => s + word.answer.length * 10);
         setChat(c => [...c, { who: "bot", text: sarcasticReply(guess, "correct") }]);
@@ -197,18 +190,16 @@ export default function CrosswordBattleArena() {
           return gg;
         });
         setAnswerInput("");
-        const rem = puzzle.words.find(w => !newSolved.has(w.number));
-        if (rem) setSelected(rem.number);
+        const rem = puzzle.words.find(w => !newSolved.has(`${w.number}${w.direction === "across" ? "A" : "D"}`));
+        if (rem) setSelected(`${rem.number}${rem.direction === "across" ? "A" : "D"}`);
         if (newSolved.size === puzzle.words.length) finishGame();
       }
     } else {
-      // only bot responds (no user guess in chat)
       setChat(c => [...c, { who: "bot", text: sarcasticReply(guess, "wrong") }]);
       setAnswerInput("");
     }
   }
 
-  // chat (right box) — separate from answers
   function sendChat() {
     const msg = chatInput.trim();
     if (!msg) return;
@@ -217,25 +208,9 @@ export default function CrosswordBattleArena() {
     setChatInput("");
   }
 
-  // Auto-solve (fill everything)
-  function autoSolveAll() {
-    for (const w of puzzle.words) {
-      setGrid(g => {
-        const gg = g.map(row => [...row]);
-        if (w.direction === "across") for (let i = 0; i < w.answer.length; i++) gg[w.row][w.col + i] = w.answer[i];
-        else for (let i = 0; i < w.answer.length; i++) gg[w.row + i][w.col] = w.answer[i];
-        return gg;
-      });
-      setSolved(prev => new Set(prev).add(w.number));
-      setBotScore(s => s + w.answer.length * 10);
-    }
-    setChat(c => [...c, { who: "bot", text: "Auto-solver filled the board. Bold surrender." }]);
-  }
-
   // Cell renderer
   function Cell({ r, c }: { r: number; c: number }) {
     const val = grid[r][c];
-    // starting number if a word starts here
     const start = puzzle.words.find(w => w.row === r && w.col === c);
     const isUsed = usedCells.has(`${r}-${c}`);
     return (
@@ -246,15 +221,15 @@ export default function CrosswordBattleArena() {
     );
   }
 
-  // Word item in clue list
   function WordItem({ w }: { w: (typeof puzzle.words)[number] }) {
-    const isSolved = solved.has(w.number);
-    const active = selected === w.number;
+    const id = `${w.number}${w.direction === "across" ? "A" : "D"}`;
+    const isSolved = solved.has(id);
+    const active = selected === id;
     return (
-      <button onClick={() => setSelected(w.number)} className={`w-full text-left p-3 rounded-xl border transition shadow-sm ${active ? "border-black" : "border-zinc-200"} ${isSolved ? "bg-green-50" : "bg-white"}`}>
+      <button onClick={() => setSelected(id)} className={`w-full text-left p-3 rounded-xl border transition shadow-sm ${active ? "border-black" : "border-zinc-200"} ${isSolved ? "bg-green-50" : "bg-white"}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100">{w.number}{w.direction === "across" ? "A" : "D"}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100">{id}</span>
             <span className="font-medium">{w.clue}</span>
           </div>
           <div className="text-sm opacity-60">{w.answer.length} letters</div>
@@ -264,7 +239,7 @@ export default function CrosswordBattleArena() {
     );
   }
 
-  const currentWord = byNumber[selected];
+  const currentWord = byId[selected];
   const progress = Math.round(((puzzle.words.length - remaining.length) / puzzle.words.length) * 100);
   const winner = gameOver ? (userScore > botScore ? "You" : userScore < botScore ? "Bot" : "Tie") : null;
 
@@ -279,13 +254,11 @@ export default function CrosswordBattleArena() {
             <p className="text-xs opacity-60">Answer input (left) — Chat (right).</p>
           </div>
         </div>
-
         <div className="flex items-center gap-3">
           <ScoreBadge label="You" score={userScore} highlight={userScore >= botScore} />
           <ScoreBadge label="Bot" score={botScore} highlight={botScore > userScore} />
           <div className="ml-2 px-3 py-2 rounded-2xl bg-white shadow text-sm font-semibold tabular-nums">⏱ {Math.max(0, timeLeft)}s</div>
           <button onClick={newGame} className="ml-2 px-4 py-2 rounded-xl bg-black text-white">New Game</button>
-          <button onClick={autoSolveAll} className="ml-2 px-4 py-2 rounded-xl bg-red-600 text-white">Auto-solve</button>
         </div>
       </header>
 
@@ -298,7 +271,7 @@ export default function CrosswordBattleArena() {
       </div>
 
       <main className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-6">
-        {/* Left: Grid + Answer Box + Clues */}
+        {/* Left */}
         <section className="space-y-4">
           <div className="rounded-2xl bg-white shadow p-4">
             <div className="grid grid-cols-10 gap-0 w-fit mx-auto">
@@ -309,66 +282,45 @@ export default function CrosswordBattleArena() {
               ))}
             </div>
           </div>
-
-          <div className="rounded-2xl bg-white shadow p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm opacity-70">Selected: <span className="font-semibold">{currentWord?.number}{currentWord?.direction === "across" ? "A" : "D"}</span></div>
-              <div className="text-sm opacity-70">Length: {currentWord?.answer.length}</div>
+          <form onSubmit={submitAnswer} className="rounded-2xl bg-white shadow p-4 flex gap-2">
+            <input value={answerInput} onChange={e => setAnswerInput(e.target.value)} placeholder={currentWord ? `Answer for ${selected}` : "Select a clue"} className="flex-1 px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-black" />
+            <button type="submit" className="px-4 py-2 rounded-xl bg-black text-white">Submit</button>
+          </form>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="rounded-2xl bg-white shadow p-4">
+              <h2 className="font-bold mb-2">Across</h2>
+              <div className="space-y-2">{puzzle.words.filter(w => w.direction === "across").map(w => <WordItem key={`${w.number}A`} w={w} />)}</div>
             </div>
-            <div className="mt-2 font-medium">{currentWord?.clue}</div>
-
-            <form onSubmit={(e) => { e.preventDefault(); submitAnswer(); }} className="mt-3 flex gap-2">
-              <input value={answerInput} onChange={(e) => setAnswerInput(e.target.value)} maxLength={currentWord?.answer.length || 20} placeholder="Type your answer (not sent to chat)" className="flex-1 px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-black" />
-              <button type="submit" className="px-4 py-2 rounded-xl bg-black text-white">Submit</button>
-            </form>
-          </div>
-
-          <div className="rounded-2xl bg-white shadow p-4">
-            <h3 className="text-sm font-semibold mb-2">Across</h3>
-            <div className="space-y-2">{puzzle.words.filter(w => w.direction === "across").map(w => <WordItem key={`A${w.number}`} w={w} />)}</div>
-            <h3 className="text-sm font-semibold mt-4 mb-2">Down</h3>
-            <div className="space-y-2">{puzzle.words.filter(w => w.direction === "down").map(w => <WordItem key={`D${w.number}`} w={w} />)}</div>
+            <div className="rounded-2xl bg-white shadow p-4">
+              <h2 className="font-bold mb-2">Down</h2>
+              <div className="space-y-2">{puzzle.words.filter(w => w.direction === "down").map(w => <WordItem key={`${w.number}D`} w={w} />)}</div>
+            </div>
           </div>
         </section>
 
-        {/* Right: Chat */}
-        <section className="rounded-2xl bg-white shadow p-4 flex flex-col">
-          <h3 className="text-sm font-semibold">Live Chat</h3>
-          <div className="mt-3 flex-1 overflow-auto space-y-2 pr-1">
+        {/* Right */}
+        <section className="flex flex-col rounded-2xl bg-white shadow p-4">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
             {chat.map((m, i) => (
-              <div key={i} className={`max-w-[85%] p-3 rounded-2xl shadow ${m.who === "me" ? "ml-auto bg-zinc-900 text-white" : "bg-zinc-100"}`}>
-                <div className="text-xs opacity-60 mb-1">{m.who === "me" ? "You" : "Bot"}</div>
-                <div className="whitespace-pre-wrap leading-snug">{m.text}</div>
+              <div key={i} className={`px-3 py-2 rounded-xl max-w-[80%] ${m.who === "bot" ? "bg-zinc-100 self-start" : "bg-black text-white self-end"}`}>
+                {m.text}
               </div>
             ))}
             <div ref={chatEndRef} />
           </div>
-
-          <div className="mt-3 flex gap-2">
-            <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Chat with the bot..." className="flex-1 px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-black" />
+          <div className="mt-2 flex gap-2">
+            <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Chat with the bot…" className="flex-1 px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-black" />
             <button onClick={sendChat} className="px-4 py-2 rounded-xl bg-black text-white">Send</button>
           </div>
-
-          <p className="text-xs opacity-60 mt-2">Tip: Use the left box to answer clues.</p>
         </section>
       </main>
 
-      <footer className="max-w-6xl mx-auto px-4 pb-8 opacity-60 text-xs mt-6">Made with ⚡ snark & React — puzzle: GfG #10</footer>
-
-      {/* Game Over modal */}
+      {/* End Modal */}
       <Modal open={gameOver} onClose={() => {}}>
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">Game Over</h2>
-          <p className="mt-2 opacity-70">Time&apos;s up or all words solved.</p>
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <ScoreBadge label="You" score={userScore} highlight={userScore >= botScore} />
-            <ScoreBadge label="Bot" score={botScore} highlight={botScore > userScore} />
-          </div>
-          <div className="mt-4 text-lg font-semibold">{winner === "Tie" ? "It's a tie!" : winner ? `${winner} wins!` : null}</div>
-          <div className="mt-6 flex items-center justify-center gap-3">
-            <button onClick={newGame} className="px-5 py-2 rounded-xl bg-black text-white">Start New Game</button>
-          </div>
-        </div>
+        <h2 className="text-xl font-bold mb-2">Game Over</h2>
+        <p className="mb-4">Final Score: You {userScore} — Bot {botScore}</p>
+        <p className="mb-4">{winner === "Tie" ? "It's a tie!" : `${winner} win${winner === "You" ? "" : "s"}!`}</p>
+        <button onClick={newGame} className="px-4 py-2 rounded-xl bg-black text-white">Play Again</button>
       </Modal>
     </div>
   );

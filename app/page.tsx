@@ -38,7 +38,7 @@ const PUZZLE = {
     { number: 16, row: 7, col: 5, answer: "ANT", clue: "Picnic pest", direction: "down" },
     { number: 18, row: 7, col: 7, answer: "END", clue: "Finish", direction: "down" },
     { number: 19, row: 9, col: 0, answer: "ROBUST", clue: "Strong", direction: "across" },
-
+    { number: 20, row: 2, col: 9, answer: "YEARLING", clue: "Animal one year old", direction: "down" },
   ],
 };
 

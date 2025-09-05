@@ -16,6 +16,7 @@ const PUZZLE = {
   words: [
     // ACROSS
     { number: 1, row: 0, col: 0, answer: "TRIP", clue: "Excursion", direction: "across" },
+    { number: 5, row: 0, col: 7, answer: "SAP", clue: "tree fluid", direction: "across" },
     { number: 6, row: 1, col: 3, answer: "REACH", clue: "Boxer's stat", direction: "across" },
     { number: 7, row: 2, col: 0, answer: "BLUE", clue: "Spectrum color", direction: "across" },
     { number: 8, row: 3, col: 3, answer: "SWEEP", clue: "Use a broom", direction: "across" },
@@ -23,6 +24,7 @@ const PUZZLE = {
     { number: 13, row: 5, col: 4, answer: "EDGE", clue: "Margin", direction: "across" },
     { number: 14, row: 6, col: 0, answer: "UNCLE", clue: "Remus, e.g.", direction: "across" },
     { number: 15, row: 7, col: 4, answer: "LATE", clue: "Recent", direction: "across" },
+    { number: 17, row: 2, col: 7, answer: "IVY", clue: "Climbing plant", direction: "across" },
 
     // DOWN
     { number: 2, row: 0, col: 1, answer: "RULER", clue: "King or Queen", direction: "down" },
@@ -33,6 +35,10 @@ const PUZZLE = {
     { number: 10, row: 3, col: 6, answer: "EIGHT", clue: "Ice skating figure", direction: "down" },
     { number: 11, row: 4, col: 0, answer: "FOUR", clue: "Two squared", direction: "down" },
     { number: 12, row: 4, col: 2, answer: "EACH", clue: "Apiece", direction: "down" },
+    { number: 16, row: 7, col: 5, answer: "ANT", clue: "Picnic pest", direction: "down" },
+    { number: 18, row: 7, col: 7, answer: "END", clue: "Finish", direction: "down" },
+    { number: 19, row: 9, col: 0, answer: "ROBUST", clue: "Strong", direction: "across" },
+
   ],
 };
 
